@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Camp W1 — 小工具集</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Noto+Sans+SC:wght@300;400;500&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0e0e10;
+  --surface: #18181c;
+  --surface2: #222228;
+  --border: #2e2e38;
+  --accent: #7c6dfa;
+  --accent2: #fa6d8f;
+  --accent3: #6dfabc;
+  --accent4: #fac96d;
+  --text: #e8e8f0;
+  --muted: #7a7a90;
+  --mono: 'DM Mono', monospace;
+  --sans: 'Noto Sans SC', sans-serif;
+  --display: 'Syne', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-weight: 300;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* noise overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.5;
+}
+
+/* header */
+header {
+  padding: 3rem 2rem 2rem;
+  max-width: 860px;
+  margin: 0 auto;
+  position: relative;
+}
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: .15em;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+h1 {
+  font-family: var(--display);
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 800;
+  line-height: 1.05;
+  margin-bottom: .75rem;
+  background: linear-gradient(135deg, var(--text) 40%, var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.subtitle {
+  color: var(--muted);
+  font-size: 14px;
+  font-family: var(--mono);
+}
+
+/* nav pills */
+nav {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 1.5rem 2rem;
+  max-width: 860px;
+  margin: 0 auto;
+  position: sticky;
+  top: 0;
+  background: rgba(14,14,16,.85);
+  backdrop-filter: blur(16px);
+  z-index: 10;
+  border-bottom: 1px solid var(--border);
+}
+nav button {
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 7px 16px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all .2s;
+  letter-spacing: .03em;
+}
+nav button:hover { border-color: var(--accent); color: var(--text); }
+nav button.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 500; }
+
+/* main layout */
+main {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+/* tool panels */
+.tool { display: none; animation: fadeUp .3s ease; }
+.tool.active { display: block; }
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.tool-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+.tool-icon {
+  width: 52px; height: 52px;
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+  flex-shrink: 0;
+}
+.tool-title { font-family: var(--display); font-size: 1.5rem; font-weight: 700; margin-bottom: 4px; }
+.tool-desc { font-size: 13px; color: var(--muted); font-family: var(--mono); }
+
+/* card */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+/* form elements */
+.field { margin-bottom: 1.25rem; }
+label {
+  display: block;
+  font-size: 12px;
+  font-family: var(--mono);
+  color: var(--muted);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+input[type=text], input[type=number], select {
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 15px;
+  outline: none;
+  transition: border-color .2s;
+}
+input:focus, select:focus { border-color: var(--accent); }
+input.error { border-color: var(--accent2); }
+select option { background: var(--surface2); }
+
+.error-msg {
+  font-size: 12px;
+  color: var(--accent2);
+  font-family: var(--mono);
+  margin-top: 6px;
+  display: none;
+}
+.error-msg.show { display: block; }
+
+/* slider */
+.slider-wrap { display: flex; align-items: center; gap: 12px; }
+input[type=range] {
+  flex: 1;
+  -webkit-appearance: none;
+  height: 4px;
+  background: var(--border);
+  border-radius: 4px;
+  outline: none;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+}
+.slider-val {
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--accent);
+  min-width: 40px;
+  text-align: right;
+}
+
+/* radio group */
+.radio-group { display: flex; gap: 8px; flex-wrap: wrap; }
+.radio-group input { display: none; }
+.radio-group label {
+  padding: 8px 20px;
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  cursor: pointer;
+  font-size: 13px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--muted);
+  transition: all .2s;
+  margin: 0;
+}
+.radio-group input:checked + label {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(124,109,250,.1);
+}
+
+/* button */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  border-radius: 10px;
+  border: none;
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .2s;
+  letter-spacing: .03em;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #9585fb; transform: translateY(-1px); }
+.btn-primary:active { transform: scale(.98); }
+.btn-ghost {
+  background: var(--surface2);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+.btn-ghost:hover { color: var(--text); border-color: var(--muted); }
+
+/* result box */
+.result {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  margin-top: 1.25rem;
+  display: none;
+  animation: fadeUp .25s ease;
+}
+.result.show { display: block; }
+.result-label {
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--muted);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  margin-bottom: .5rem;
+}
+.result-value {
+  font-family: var(--display);
+  font-size: 2.2rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.result-sub {
+  font-size: 13px;
+  color: var(--muted);
+  font-family: var(--mono);
+  margin-top: .4rem;
+}
+.result-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin-top: 1rem;
+}
+.result-cell {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.result-cell .rc-label { font-size: 11px; color: var(--muted); font-family: var(--mono); margin-bottom: 4px; }
+.result-cell .rc-val { font-size: 1.3rem; font-family: var(--display); font-weight: 700; }
+
+/* password display */
+.pwd-display {
+  font-family: var(--mono);
+  font-size: 1.3rem;
+  letter-spacing: .08em;
+  word-break: break-all;
+  padding: 1rem;
+  background: var(--bg);
+  border-radius: 8px;
+  margin: .75rem 0;
+  border: 1px solid var(--border);
+  color: var(--accent3);
+  line-height: 1.6;
+}
+.copy-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 20px;
+  background: rgba(109,250,188,.1);
+  border: 1px solid var(--accent3);
+  border-radius: 8px;
+  color: var(--accent3);
+  font-family: var(--mono);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all .2s;
+  margin-top: .5rem;
+}
+.copy-btn:hover { background: rgba(109,250,188,.2); }
+.copy-btn.copied { background: rgba(109,250,188,.25); }
+
+/* strength bar */
+.strength-bar {
+  display: flex; gap: 4px; margin-top: .75rem;
+}
+.strength-seg {
+  flex: 1; height: 4px; border-radius: 4px;
+  background: var(--border);
+  transition: background .3s;
+}
+
+/* bmi bar */
+.bmi-scale {
+  position: relative;
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(to right, #6dfabc, #fac96d, #fa6d8f, #e24b4b);
+  margin: 1rem 0 .5rem;
+}
+.bmi-marker {
+  position: absolute;
+  top: -5px;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid var(--accent);
+  transform: translateX(-50%);
+  transition: left .5s cubic-bezier(.34,1.56,.64,1);
+}
+.bmi-labels {
+  display: flex; justify-content: space-between;
+  font-size: 10px; color: var(--muted); font-family: var(--mono);
+}
+
+/* greeting output */
+.greeting-out {
+  font-size: 1.1rem;
+  line-height: 1.8;
+  padding: 1.25rem;
+  background: var(--bg);
+  border-radius: 8px;
+  border-left: 3px solid var(--accent);
+}
+.greeting-badge {
+  display: inline-block;
+  padding: 3px 12px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-family: var(--mono);
+  margin-bottom: .75rem;
+}
+
+/* tip rows */
+.tip-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+.tip-row:last-child { border-bottom: none; }
+.tip-row .amount { font-family: var(--mono); font-weight: 500; }
+.tip-total .amount { font-size: 1.4rem; font-family: var(--display); font-weight: 700; color: var(--accent4); }
+
+/* footer */
+footer {
+  text-align: center;
+  padding: 3rem 2rem;
+  color: var(--muted);
+  font-size: 12px;
+  font-family: var(--mono);
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">Claude Camp · Week 1 · XiaoLiang</div>
+  <h1>小工具集</h1>
+  <p class="subtitle">// 5 tools · built with Python logic · running in browser</p>
+</header>
+
+<nav>
+  <button class="active" onclick="show('temp')">🌡️ 温度转换</button>
+  <button onclick="show('greet')">👋 问候语</button>
+  <button onclick="show('tip')">💰 小费计算</button>
+  <button onclick="show('pwd')">🔑 密码生成</button>
+  <button onclick="show('bmi')">⚖️ BMI</button>
+</nav>
+
+<main>
+
+<!-- 1. 温度转换 -->
+<div class="tool active" id="tool-temp">
+  <div class="tool-header">
+    <div class="tool-icon" style="background:rgba(124,109,250,.15)">🌡️</div>
+    <div>
+      <div class="tool-title">温度转换器</div>
+      <div class="tool-desc">摄氏度 ↔ 华氏度 · 自动识别单位</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="field">
+      <label>输入温度</label>
+      <input type="number" id="temp-val" placeholder="例如：25" step="any">
+      <div class="error-msg" id="temp-err"></div>
+    </div>
+    <div class="field">
+      <label>转换方向</label>
+      <div class="radio-group">
+        <input type="radio" name="tempdir" id="td-cf" value="cf" checked>
+        <label for="td-cf">摄氏 → 华氏</label>
+        <input type="radio" name="tempdir" id="td-fc" value="fc">
+        <label for="td-fc">华氏 → 摄氏</label>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="calcTemp()">转换</button>
+    <div class="result" id="temp-result">
+      <div class="result-label">转换结果</div>
+      <div class="result-value" id="temp-out"></div>
+      <div class="result-sub" id="temp-note"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 2. 问候语 -->
+<div class="tool" id="tool-greet">
+  <div class="tool-header">
+    <div class="tool-icon" style="background:rgba(250,109,143,.15)">👋</div>
+    <div>
+      <div class="tool-title">个性化问候语</div>
+      <div class="tool-desc">输入姓名和年龄，生成专属问候</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="field">
+      <label>你的姓名</label>
+      <input type="text" id="greet-name" placeholder="例如：小明 或 XiaoLiang">
+      <div class="error-msg" id="greet-name-err"></div>
+    </div>
+    <div class="field">
+      <label>你的年龄</label>
+      <input type="number" id="greet-age" placeholder="例如：25" min="1" max="120">
+      <div class="error-msg" id="greet-age-err"></div>
+    </div>
+    <button class="btn btn-primary" onclick="calcGreet()">生成问候</button>
+    <div class="result" id="greet-result">
+      <div class="greeting-badge" id="greet-badge"></div>
+      <div class="greeting-out" id="greet-out"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 3. 小费计算 -->
+<div class="tool" id="tool-tip">
+  <div class="tool-header">
+    <div class="tool-icon" style="background:rgba(250,201,109,.15)">💰</div>
+    <div>
+      <div class="tool-title">小费计算器</div>
+      <div class="tool-desc">餐费 + 小费比例 + AA分摊 · 一键算清</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="field">
+      <label>餐费金额（$）</label>
+      <input type="number" id="tip-amount" placeholder="例如：88.50" min="0" step="0.01">
+      <div class="error-msg" id="tip-amount-err"></div>
+    </div>
+    <div class="field">
+      <label>小费比例：<span id="tip-rate-display" style="color:var(--accent4);font-family:var(--mono)">15%</span></label>
+      <div class="slider-wrap">
+        <input type="range" id="tip-rate" min="0" max="50" value="15" step="1"
+          oninput="document.getElementById('tip-rate-display').textContent=this.value+'%'">
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:4px">
+        <span>0%</span><span>10%</span><span>15%</span><span>20%</span><span>50%</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>AA人数</label>
+      <div class="radio-group">
+        <input type="radio" name="people" id="p1" value="1" checked><label for="p1">1人</label>
+        <input type="radio" name="people" id="p2" value="2"><label for="p2">2人</label>
+        <input type="radio" name="people" id="p3" value="3"><label for="p3">3人</label>
+        <input type="radio" name="people" id="p4" value="4"><label for="p4">4人</label>
+        <input type="radio" name="people" id="p5" value="5"><label for="p5">5人</label>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="calcTip()">计算</button>
+    <div class="result" id="tip-result">
+      <div id="tip-rows"></div>
+    </div>
+  </div>
+</div>
+
+<!-- 4. 密码生成 -->
+<div class="tool" id="tool-pwd">
+  <div class="tool-header">
+    <div class="tool-icon" style="background:rgba(109,250,188,.15)">🔑</div>
+    <div>
+      <div class="tool-title">密码生成器</div>
+      <div class="tool-desc">随机生成强密码 · 一键复制</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="field">
+      <label>密码长度：<span id="pwd-len-display" style="color:var(--accent3);font-family:var(--mono)">16位</span></label>
+      <div class="slider-wrap">
+        <input type="range" id="pwd-len" min="8" max="64" value="16" step="1"
+          oninput="document.getElementById('pwd-len-display').textContent=this.value+'位'">
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:4px">
+        <span>8</span><span>16</span><span>32</span><span>64</span>
+      </div>
+    </div>
+    <div class="field">
+      <label>包含字符类型</label>
+      <div class="radio-group" style="flex-wrap:wrap">
+        <input type="checkbox" id="ch-upper" checked style="display:none">
+        <label for="ch-upper" id="lbl-upper" style="cursor:pointer">大写 A-Z</label>
+        <input type="checkbox" id="ch-lower" checked style="display:none">
+        <label for="ch-lower" id="lbl-lower">小写 a-z</label>
+        <input type="checkbox" id="ch-num" checked style="display:none">
+        <label for="ch-num" id="lbl-num">数字 0-9</label>
+        <input type="checkbox" id="ch-sym" checked style="display:none">
+        <label for="ch-sym" id="lbl-sym">符号 !@#</label>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="genPwd()">生成密码</button>
+    <div class="result" id="pwd-result">
+      <div class="result-label">生成的密码</div>
+      <div class="pwd-display" id="pwd-out"></div>
+      <div class="strength-bar">
+        <div class="strength-seg" id="sb1"></div>
+        <div class="strength-seg" id="sb2"></div>
+        <div class="strength-seg" id="sb3"></div>
+        <div class="strength-seg" id="sb4"></div>
+      </div>
+      <div class="result-sub" id="pwd-strength" style="margin-top:.5rem"></div>
+      <button class="copy-btn" id="copy-btn" onclick="copyPwd()">
+        <span id="copy-icon">📋</span>
+        <span id="copy-text">点击复制密码</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- 5. BMI -->
+<div class="tool" id="tool-bmi">
+  <div class="tool-header">
+    <div class="tool-icon" style="background:rgba(250,109,143,.15)">⚖️</div>
+    <div>
+      <div class="tool-title">BMI 计算器</div>
+      <div class="tool-desc">输入身高体重 · 自动识别单位 · 健康建议</div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="field">
+      <label>身高</label>
+      <div style="display:flex;gap:8px">
+        <input type="number" id="bmi-h" placeholder="例如：175" step="any" style="flex:1">
+        <div class="radio-group" style="flex-shrink:0">
+          <input type="radio" name="hunit" id="hu-cm" value="cm" checked><label for="hu-cm">cm</label>
+          <input type="radio" name="hunit" id="hu-m" value="m"><label for="hu-m">m</label>
+        </div>
+      </div>
+      <div class="error-msg" id="bmi-h-err"></div>
+    </div>
+    <div class="field">
+      <label>体重</label>
+      <div style="display:flex;gap:8px">
+        <input type="number" id="bmi-w" placeholder="例如：68" step="any" style="flex:1">
+        <div class="radio-group" style="flex-shrink:0">
+          <input type="radio" name="wunit" id="wu-kg" value="kg" checked><label for="wu-kg">kg</label>
+          <input type="radio" name="wunit" id="wu-lb" value="lb"><label for="wu-lb">lb</label>
+        </div>
+      </div>
+      <div class="error-msg" id="bmi-w-err"></div>
+    </div>
+    <button class="btn btn-primary" onclick="calcBMI()">计算 BMI</button>
+    <div class="result" id="bmi-result">
+      <div class="result-label">你的 BMI</div>
+      <div class="result-value" id="bmi-val"></div>
+      <div class="bmi-scale"><div class="bmi-marker" id="bmi-marker"></div></div>
+      <div class="bmi-labels">
+        <span>偏轻 &lt;18.5</span><span>正常 18.5–24</span><span>偏重 24–28</span><span>肥胖 &gt;28</span>
+      </div>
+      <div class="result-grid" style="margin-top:1rem">
+        <div class="result-cell">
+          <div class="rc-label">分类</div>
+          <div class="rc-val" id="bmi-cat"></div>
+        </div>
+        <div class="result-cell">
+          <div class="rc-label">健康建议</div>
+          <div style="font-size:13px;color:var(--muted);margin-top:4px" id="bmi-advice"></div>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:1rem">
+        ⚠️ BMI 仅供参考，不替代专业医疗诊断。
+      </div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<footer>
+  Made by XiaoLiang · Claude Camp Week 1 · 2026
+</footer>
+
+<script>
+// nav
+function show(id) {
+  document.querySelectorAll('.tool').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('tool-' + id).classList.add('active');
+  event.currentTarget.classList.add('active');
+}
+
+function showErr(id, msg) {
+  const el = document.getElementById(id);
+  el.textContent = msg; el.classList.add('show');
+  const inp = el.previousElementSibling;
+  if (inp && inp.tagName === 'INPUT') inp.classList.add('error');
+}
+function clearErr(id) {
+  const el = document.getElementById(id);
+  el.classList.remove('show');
+  const inp = el.previousElementSibling;
+  if (inp && inp.tagName === 'INPUT') inp.classList.remove('error');
+}
+
+// 1. 温度转换
+function calcTemp() {
+  clearErr('temp-err');
+  const raw = document.getElementById('temp-val').value.trim();
+  const t = parseFloat(raw);
+  if (isNaN(t)) { showErr('temp-err', '❌ 请输入数字，例如：25 或 -10'); return; }
+  if (t < -273.15) { showErr('temp-err', '❌ 低于绝对零度（-273.15°C），物理上不存在'); return; }
+  const dir = document.querySelector('input[name=tempdir]:checked').value;
+  let res, note;
+  if (dir === 'cf') {
+    res = t * 9/5 + 32;
+    note = `${t}°C 换算为华氏度`;
+    document.getElementById('temp-out').textContent = res.toFixed(2) + ' °F';
+  } else {
+    res = (t - 32) * 5/9;
+    note = `${t}°F 换算为摄氏度`;
+    document.getElementById('temp-out').textContent = res.toFixed(2) + ' °C';
+  }
+  document.getElementById('temp-note').textContent = note;
+  document.getElementById('temp-result').classList.add('show');
+}
+
+// 2. 问候语
+function calcGreet() {
+  clearErr('greet-name-err'); clearErr('greet-age-err');
+  let ok = true;
+  const name = document.getElementById('greet-name').value.trim();
+  const ageRaw = document.getElementById('greet-age').value.trim();
+  if (!name) { showErr('greet-name-err', '❌ 姓名不能为空'); ok = false; }
+  if (name.length > 50) { showErr('greet-name-err', '❌ 姓名不能超过50字'); ok = false; }
+  const age = parseInt(ageRaw);
+  if (!ageRaw || isNaN(age)) { showErr('greet-age-err', '❌ 请输入数字年龄，例如：25'); ok = false; }
+  else if (age < 1 || age > 120) { showErr('greet-age-err', '⚠️ 请输入 1～120 之间的年龄'); ok = false; }
+  if (!ok) return;
+
+  const badge = document.getElementById('greet-badge');
+  const out = document.getElementById('greet-out');
+
+  if (name.toLowerCase() === 'xiaoliang') {
+    badge.textContent = '✨ 创建者模式';
+    badge.style.cssText = 'background:rgba(124,109,250,.2);color:#9585fb;border:1px solid rgba(124,109,250,.4)';
+    out.innerHTML = `🎉 欢迎回来，<strong>XiaoLiang</strong>！<br>你是本程序的创建者，向你致敬！<br>你今年 ${age} 岁，继续加油学习 Python！`;
+  } else {
+    let msg;
+    if (age < 13) msg = '你好小朋友，希望你每天开心快乐！🌟';
+    else if (age < 18) msg = '青春是最宝贵的财富，好好加油！💪';
+    else if (age < 60) msg = '希望你工作顺利，生活充实！🚀';
+    else msg = '岁月沉淀，智慧与日俱增，您好！🌸';
+    badge.textContent = age < 18 ? '青少年' : age < 60 ? '成年人' : '长辈';
+    badge.style.cssText = 'background:rgba(250,109,143,.15);color:#fa6d8f;border:1px solid rgba(250,109,143,.3)';
+    out.innerHTML = `你好，<strong>${name}</strong>！<br>你今年 ${age} 岁。<br>${msg}`;
+  }
+  document.getElementById('greet-result').classList.add('show');
+}
+
+// 3. 小费计算
+function calcTip() {
+  clearErr('tip-amount-err');
+  const raw = document.getElementById('tip-amount').value;
+  const amount = parseFloat(raw);
+  if (!raw || isNaN(amount) || amount <= 0) { showErr('tip-amount-err', '❌ 请输入大于0的金额'); return; }
+  const rate = parseInt(document.getElementById('tip-rate').value) / 100;
+  const people = parseInt(document.querySelector('input[name=people]:checked').value);
+  const tip = amount * rate;
+  const total = amount + tip;
+  const per = total / people;
+  const rows = document.getElementById('tip-rows');
+  rows.innerHTML = `
+    <div class="tip-row"><span>餐费</span><span class="amount">$${amount.toFixed(2)}</span></div>
+    <div class="tip-row"><span>小费 (${(rate*100).toFixed(0)}%)</span><span class="amount" style="color:var(--accent4)">$${tip.toFixed(2)}</span></div>
+    <div class="tip-row tip-total"><span>合计</span><span class="amount">$${total.toFixed(2)}</span></div>
+    ${people > 1 ? `<div class="tip-row"><span>每人 (${people}人AA)</span><span class="amount" style="color:var(--accent)">$${per.toFixed(2)}</span></div>` : ''}
+  `;
+  document.getElementById('tip-result').classList.add('show');
+}
+
+// 4. 密码生成
+let currentPwd = '';
+function genPwd() {
+  const len = parseInt(document.getElementById('pwd-len').value);
+  const useUpper = document.getElementById('ch-upper').checked;
+  const useLower = document.getElementById('ch-lower').checked;
+  const useNum   = document.getElementById('ch-num').checked;
+  const useSym   = document.getElementById('ch-sym').checked;
+  let pool = '';
+  if (useUpper) pool += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+  if (useLower) pool += 'abcdefghijklmnopqrstuvwxyz';
+  if (useNum)   pool += '0123456789';
+  if (useSym)   pool += '!@#$%^&*()_+-=[]{}|;:,.<>?';
+  if (!pool) { pool = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; }
+  let pwd = '';
+  const arr = new Uint32Array(len);
+  crypto.getRandomValues(arr);
+  for (let i = 0; i < len; i++) pwd += pool[arr[i] % pool.length];
+  currentPwd = pwd;
+  document.getElementById('pwd-out').textContent = pwd;
+
+  const score = [useUpper,useLower,useNum,useSym].filter(Boolean).length;
+  const colors = ['#e24b4b','#fac96d','#fac96d','#6dfabc'];
+  const labels = ['🔴 弱','🟡 中等','🟡 中等','🟢 强（推荐）'];
+  for (let i = 1; i <= 4; i++) {
+    document.getElementById('sb'+i).style.background = i <= score ? colors[score-1] : 'var(--border)';
+  }
+  document.getElementById('pwd-strength').textContent = '强度：' + labels[score-1];
+
+  const btn = document.getElementById('copy-btn');
+  btn.classList.remove('copied');
+  document.getElementById('copy-icon').textContent = '📋';
+  document.getElementById('copy-text').textContent = '点击复制密码';
+  document.getElementById('pwd-result').classList.add('show');
+}
+
+function copyPwd() {
+  if (!currentPwd) return;
+  navigator.clipboard.writeText(currentPwd).then(() => {
+    document.getElementById('copy-icon').textContent = '✅';
+    document.getElementById('copy-text').textContent = '已复制！直接粘贴使用';
+    document.getElementById('copy-btn').classList.add('copied');
+    setTimeout(() => {
+      document.getElementById('copy-icon').textContent = '📋';
+      document.getElementById('copy-text').textContent = '点击复制密码';
+      document.getElementById('copy-btn').classList.remove('copied');
+    }, 3000);
+  });
+}
+
+// checkbox toggle style for pwd options
+['upper','lower','num','sym'].forEach(k => {
+  const cb = document.getElementById('ch-'+k);
+  const lb = document.getElementById('lbl-'+k) || cb.nextElementSibling;
+  lb.style.background = 'rgba(109,250,188,.1)';
+  lb.style.borderColor = 'var(--accent3)';
+  lb.style.color = 'var(--accent3)';
+  cb.addEventListener('change', () => {
+    if (cb.checked) {
+      lb.style.background = 'rgba(109,250,188,.1)';
+      lb.style.borderColor = 'var(--accent3)';
+      lb.style.color = 'var(--accent3)';
+    } else {
+      lb.style.background = '';
+      lb.style.borderColor = '';
+      lb.style.color = '';
+    }
+  });
+});
+
+// 5. BMI
+function calcBMI() {
+  clearErr('bmi-h-err'); clearErr('bmi-w-err');
+  let ok = true;
+  let h = parseFloat(document.getElementById('bmi-h').value);
+  let w = parseFloat(document.getElementById('bmi-w').value);
+  const hunit = document.querySelector('input[name=hunit]:checked').value;
+  const wunit = document.querySelector('input[name=wunit]:checked').value;
+  if (isNaN(h) || h <= 0) { showErr('bmi-h-err', '❌ 请输入有效身高'); ok = false; }
+  if (isNaN(w) || w <= 0) { showErr('bmi-w-err', '❌ 请输入有效体重'); ok = false; }
+  if (!ok) return;
+  if (hunit === 'cm') h = h / 100;
+  if (wunit === 'lb') w = w * 0.453592;
+  const hcm = h * 100;
+  if (hcm < 50 || hcm > 250) { showErr('bmi-h-err', '❌ 身高需在 50～250cm 范围内'); return; }
+  if (w < 20 || w > 300) { showErr('bmi-w-err', '❌ 体重需在 20～300kg 范围内'); return; }
+  const bmi = w / (h * h);
+  document.getElementById('bmi-val').textContent = bmi.toFixed(1);
+
+  let cat, advice, col;
+  if (bmi < 18.5)      { cat='偏轻'; advice='建议适当增加营养摄入，均衡饮食。'; col='#6dfabc'; }
+  else if (bmi < 24)   { cat='正常 ✓'; advice='恭喜！体重处于健康范围，请保持。'; col='#6dfabc'; }
+  else if (bmi < 28)   { cat='偏重'; advice='建议适量运动，注意饮食结构。'; col='#fac96d'; }
+  else                 { cat='肥胖'; advice='建议咨询医生或营养师，制定健康计划。'; col='#fa6d8f'; }
+
+  document.getElementById('bmi-cat').textContent = cat;
+  document.getElementById('bmi-cat').style.color = col;
+  document.getElementById('bmi-advice').textContent = advice;
+
+  // marker position: BMI 14→35 mapped to 0→100%
+  const pct = Math.min(Math.max((bmi - 14) / (35 - 14) * 100, 2), 98);
+  document.getElementById('bmi-marker').style.left = pct + '%';
+  document.getElementById('bmi-result').classList.add('show');
+}
+
+// enter key support
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    const active = document.querySelector('.tool.active').id;
+    const map = {'tool-temp':'calcTemp','tool-greet':'calcGreet','tool-tip':'calcTip','tool-bmi':'calcBMI'};
+    if (map[active]) window[map[active]]();
+  }
+});
+</script>
+</body>
+</html>
